@@ -1,0 +1,33 @@
+{
+  "name": "yayamatch-web",
+  "version": "1.0.0",
+  "private": true,
+  "description": "YayaMatch mobile-first web app with a desktop layout: an offline demo, and a live build on Supabase. Separate journeys for families and yayas, English and Tagalog.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "build:single": "node scripts/build.mjs --single",
+    "dev": "node scripts/build.mjs --watch",
+    "typecheck": "node node_modules/typescript/bin/tsc --noEmit -p .",
+    "check:i18n": "node scripts/check-i18n.mjs",
+    "test": "node scripts/e2e.mjs",
+    "test:desktop": "node scripts/e2e.mjs --width 1440",
+    "build:live": "node scripts/build.mjs --live",
+    "test:live": "node scripts/e2e-live.mjs"
+  },
+  "dependencies": {
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "esbuild": "0.28.2",
+    "playwright": "^1.50.0",
+    "typescript": "6.0.3"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

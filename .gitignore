@@ -1,0 +1,10 @@
+node_modules/
+.live-test/
+.build/
+dist/
+dist-live/
+dist-single/
+*.zip
+.DS_Store
+# shared sample sign-in password (staging only); set it as YM_SEED_PASSWORD in Vercel instead
+supabase/seed/.sample-password
