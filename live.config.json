@@ -1,0 +1,5 @@
+{
+  "_note": "Public values for the live build: the Supabase project URL and its publishable key (safe in a browser). YM_SUPABASE_URL / YM_SUPABASE_KEY in the environment override them. Never put secret keys or the sample password here.",
+  "supabaseUrl": "https://qvczthltbdefwefpsncd.supabase.co",
+  "supabaseKey": "sb_publishable_R6MiXfrtugCVFauHRqGDwQ_ddYGsX0c"
+}

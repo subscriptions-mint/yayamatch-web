@@ -3,7 +3,7 @@
 //   node scripts/build.mjs --single  -> dist-single/index.html (images inlined, one file)
 //   node scripts/build.mjs --watch   -> rebuild dist/ on change
 //   node scripts/build.mjs --live    -> dist-live/: the app on Supabase. Reads from the environment:
-//        YM_SUPABASE_URL, YM_SUPABASE_KEY (required), YM_SEED_PASSWORD, YM_APP_URL (optional)
+//        YM_SUPABASE_URL, YM_SUPABASE_KEY (default: live.config.json), YM_SEED_PASSWORD, YM_APP_URL (optional)
 //   --out <dir> writes somewhere else (the live e2e test uses this).
 import { build, context } from 'esbuild';
 import { readFileSync, writeFileSync, mkdirSync, readdirSync, copyFileSync, rmSync, existsSync } from 'node:fs';
@@ -22,8 +22,10 @@ const out = outArg ? (outArg.startsWith('/') ? outArg : join(root, outArg)) : jo
 let configJs = '';
 if (live) {
   const env = process.env;
-  const url = (env.YM_SUPABASE_URL ?? '').trim().replace(/\/+$/, '');
-  const key = (env.YM_SUPABASE_KEY ?? '').trim();
+  // Public defaults live in live.config.json, so a fresh Vercel project builds without extra settings.
+  const defaults = existsSync(join(root, 'live.config.json')) ? JSON.parse(readFileSync(join(root, 'live.config.json'), 'utf8')) : {};
+  const url = (env.YM_SUPABASE_URL || defaults.supabaseUrl || '').trim().replace(/\/+$/, '');
+  const key = (env.YM_SUPABASE_KEY || defaults.supabaseKey || '').trim();
   if (!/^https:\/\/[\w.-]+$/.test(url) || !key) {
     console.error('--live needs YM_SUPABASE_URL (https://<project>.supabase.co) and YM_SUPABASE_KEY (the publishable or anon key).');
     process.exit(1);
