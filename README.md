@@ -159,14 +159,14 @@ The live build runs the same screens on the Supabase project in `backend-spec.md
 
 | Env var | Required | Goes into | What it is |
 |---|---|---|---|
-| `YM_SUPABASE_URL` | yes | `supabaseUrl` | `https://jighxydloffblaunaipm.supabase.co` |
+| `YM_SUPABASE_URL` | yes | `supabaseUrl` | `https://qvczthltbdefwefpsncd.supabase.co` |
 | `YM_SUPABASE_KEY` | yes | `supabaseKey` | The publishable key (or the legacy anon key). Never the service-role key |
 | `YM_SEED_PASSWORD` | staging only | `seedPassword` | Shows "Try a sample account" on Welcome (Kristine and the Santos family). Leave it out of production builds |
 | `YM_APP_URL` | recommended | `appUrl` | The site's own URL, e.g. `https://yayamatch.vercel.app/`. Used as the return address for Google/Facebook sign-in, the email link, Didit and PayMongo. Defaults to the page's own address |
 
 ```bash
-YM_SUPABASE_URL=https://jighxydloffblaunaipm.supabase.co \
-YM_SUPABASE_KEY=sb_publishable_9xQ_rmg54WypHop71Rj6Sw_7DEJbpLp \
+YM_SUPABASE_URL=https://qvczthltbdefwefpsncd.supabase.co \
+YM_SUPABASE_KEY=sb_publishable_R6MiXfrtugCVFauHRqGDwQ_ddYGsX0c \
 YM_APP_URL=https://<your-site>/ \
 YM_SEED_PASSWORD=<sample password, staging only> \
 node scripts/build.mjs --live
@@ -191,7 +191,7 @@ node scripts/build.mjs --live
 1. **Migrations:** apply `0001_core.sql`, `0002_samples.sql`, then review and apply `0003_live_app.sql` (likes count for families without a pass, dated admin ID reviews, matched people keep seeing each other's card after a hire).
 2. **Auth → URL Configuration:** Site URL = the live site. Add it (and any preview URLs) under Redirect URLs.
 3. **Auth → Email templates → Magic Link:** replace the link with the code, e.g. `<p>Your YayaMatch code: <b>{{ .Token }}</b></p>`. Keep the OTP length at 6.
-4. **Auth → Providers:** Google: create an OAuth client in Google Cloud with the redirect URI `https://jighxydloffblaunaipm.supabase.co/auth/v1/callback`, then paste the client ID and secret. Facebook: the same with a Meta app (Facebook Login, same redirect URI). Until a provider is on, its button shows "That sign-in option is not turned on yet. Use email instead."
+4. **Auth → Providers:** Google: create an OAuth client in Google Cloud with the redirect URI `https://qvczthltbdefwefpsncd.supabase.co/auth/v1/callback`, then paste the client ID and secret. Facebook: the same with a Meta app (Facebook Login, same redirect URI). Until a provider is on, its button shows "That sign-in option is not turned on yet. Use email instead."
 5. **Leave Phone/SMS sign-in off.**
 6. **Admins:** `update public.profiles set role = 'admin' where email = '<you>';` then open `#admin` (also linked from Account / Ako).
 7. **Edge function secrets** (switch each vendor from test mode to live): `APP_URL`; Didit: `DIDIT_API_KEY`, `DIDIT_WORKFLOW_ID`, `DIDIT_WEBHOOK_SECRET` (webhook URL `…/functions/v1/didit-webhook`); PayMongo: `PAYMONGO_SECRET_KEY`, `PAYMONGO_WEBHOOK_SECRET` (webhook URL `…/functions/v1/paymongo-webhook`, event `checkout_session.payment.paid`); biodata reading: `ANTHROPIC_API_KEY`.
@@ -214,7 +214,7 @@ Each edge function answers `mode: 'test'` until its vendor keys are set (and alw
 
 ### Tests
 
-`npm run test:live` (or `node scripts/e2e-live.mjs --width 1440`) builds into `.live-test/`, serves it as `https://yayamatch.test/` and answers `https://jighxydloffblaunaipm.supabase.co/**` with `scripts/mock-supabase.mjs`, an in-memory version of the tables, the RLS rules that matter, the RPCs and the edge functions. Realtime is refused on purpose, so chat must work on polling. It walks: sign-in with a provider that is off, Google, a sample account, an email code; family onboarding; like → match; the household ID check; a message and the sample's auto-reply; a message that only arrives by polling; test-mode checkout → pass → likes visible; plan a call; mark hired and the checklist; report and block; the whole yaya journey with a biodata photo, a photo upload, the ID check, share-number and confirm-hired; the admin console; and the Didit and PayMongo returns.
+`npm run test:live` (or `node scripts/e2e-live.mjs --width 1440`) builds into `.live-test/`, serves it as `https://yayamatch.test/` and answers `https://qvczthltbdefwefpsncd.supabase.co/**` with `scripts/mock-supabase.mjs`, an in-memory version of the tables, the RLS rules that matter, the RPCs and the edge functions. Realtime is refused on purpose, so chat must work on polling. It walks: sign-in with a provider that is off, Google, a sample account, an email code; family onboarding; like → match; the household ID check; a message and the sample's auto-reply; a message that only arrives by polling; test-mode checkout → pass → likes visible; plan a call; mark hired and the checklist; report and block; the whole yaya journey with a biodata photo, a photo upload, the ID check, share-number and confirm-hired; the admin console; and the Didit and PayMongo returns.
 
 ## Hosting
 

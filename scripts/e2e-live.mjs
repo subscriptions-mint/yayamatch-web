@@ -1,7 +1,7 @@
 // Live mode end to end, against an in-memory mock of the Supabase project (scripts/mock-supabase.mjs).
 //   node scripts/e2e-live.mjs [--width 390|360|1440|1280] [--height px] [--shots dir] [--full]
 // Builds the live app into .live-test/ (it never touches dist-live/), serves it as https://yayamatch.test/,
-// and answers https://jighxydloffblaunaipm.supabase.co/** with the mock. Realtime is refused, so chat must
+// and answers https://qvczthltbdefwefpsncd.supabase.co/** with the mock. Realtime is refused, so chat must
 // work on polling alone.
 import { createRequire } from 'node:module';
 import { execFileSync } from 'node:child_process';
@@ -25,7 +25,7 @@ const height = args.includes('--height') ? Number(args[args.indexOf('--height') 
 const fullPage = args.includes('--full');
 if (shotsDir) mkdirSync(shotsDir, { recursive: true });
 
-const SUPA = 'https://jighxydloffblaunaipm.supabase.co';
+const SUPA = 'https://qvczthltbdefwefpsncd.supabase.co';
 const APP = 'https://yayamatch.test/';
 const SEED_PW = 'sample-pass-123';
 const out = join(root, '.live-test');

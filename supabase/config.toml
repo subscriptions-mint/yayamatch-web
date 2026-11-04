@@ -1,0 +1,18 @@
+# YayaMatch edge functions. Every function checks the caller itself (getUser, or a webhook signature),
+# so the gateway's JWT check is off. That also keeps them working with Supabase's newer API keys.
+project_id = "qvczthltbdefwefpsncd"
+
+[functions.id-check-start]
+verify_jwt = false
+[functions.id-check-test]
+verify_jwt = false
+[functions.checkout]
+verify_jwt = false
+[functions.checkout-test]
+verify_jwt = false
+[functions.biodata-read]
+verify_jwt = false
+[functions.didit-webhook]
+verify_jwt = false
+[functions.paymongo-webhook]
+verify_jwt = false
