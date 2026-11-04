@@ -238,3 +238,10 @@ revoke execute on function public.is_demo(uuid), public.is_sample(uuid), public.
   public.reset_my_demo(), public.sample_ids(), public.set_samples_visible(boolean) from public, anon;
 grant execute on function public.is_demo(uuid), public.is_sample(uuid), public.can_see_card(uuid),
   public.reset_my_demo(), public.sample_ids(), public.set_samples_visible(boolean) to authenticated;
+
+-- Supabase gives every role full table access by default, which would bypass the column limit on checks in 0001.
+-- Re-apply it: others see only these columns of passed checks (no vendor reference, no notes).
+revoke select on public.checks from anon, authenticated;
+grant select (id, user_id, kind, status, id_type, checked_on, valid_until, age_ok, detail, created_at, updated_at) on public.checks to authenticated;
+-- Nothing in this schema is for signed-out visitors.
+revoke execute on all functions in schema public from public, anon;
