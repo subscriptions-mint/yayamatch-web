@@ -58,6 +58,7 @@ export function logout(side: 'family' | 'yaya') {
 export const sendSignInCode = live.sendCode;
 export const verifySignInCode = live.verifyCode;
 export const signInSample = live.signInSample;
+export const signInTestAccount = live.signInTestAccount;
 export const signInWith = live.oauth;
 export const chooseSide = live.chooseSide;
 

@@ -179,6 +179,20 @@ check(!Object.values((await localState()).live.helpers).some(h => h.firstName ==
 await shot('f-discover-sample');
 await signOut();
 
+// ================= test account: email + password, no reset =================
+await tid('test-account-open').click();
+check(await visible('test-account'), 'staging: test-account sign-in opens');
+await tid('test-email').fill('santos.seed@example.com');
+await tid('test-password').fill('wrong-password');
+await tid('test-signin').click();
+check(await until(() => has('Sign-in did not work')), 'test account: wrong password is refused');
+mock.calls.length = 0;
+await tid('test-password').fill(SEED_PW);
+await tid('test-signin').click();
+check(await at('#f-discover'), 'test account signs in with a password');
+check(!mock.calls.includes('rpc:reset_my_demo'), 'test account sign-in does not reset anything');
+await signOut();
+
 // ================= email code: a new family =================
 await tid('signin-email').click();
 check(await at('#auth-email'), 'email screen');

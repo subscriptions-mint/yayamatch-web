@@ -46,6 +46,13 @@ export async function signInSample(email: string): Promise<boolean> {
   return true;
 }
 
+/** Staging only: personal test accounts (email + password). A normal sign-in: nothing is reset. */
+export async function signInTestAccount(email: string, password: string): Promise<boolean> {
+  try { await auth.signInWithPassword(email.trim().toLowerCase(), password); } catch { toast(tr('live.err.signin')); return false; }
+  await afterSignIn();
+  return true;
+}
+
 export function oauth(provider: 'google' | 'facebook') {
   location.assign(auth.oauthUrl(provider));
 }

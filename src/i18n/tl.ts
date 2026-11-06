@@ -377,6 +377,7 @@ export const tl: Dict = {
       title: 'Subukan ang sample account', staging: 'Pang-staging lang', tag: 'Sample account',
       body: 'Para sa mga tester. Hati-hati ang lahat sa dalawang account na ito, at malinis ulit tuwing magsa-sign in. Sample profiles lang ang makikita nila.',
       yaya: 'Kristine', yayaSub: 'Yaya · Quezon City · naka-Tagalog', family: 'Santos Family', familySub: 'Pamilya · Makati · naka-English',
+      testOpen: 'May test account ka? Mag-sign in gamit ang password', testTitle: 'Test account', testPassword: 'Password', testGo: 'Mag-sign in',
     },
     email: {
       title: 'Mag-sign in gamit ang email', body: 'Magpapadala kami ng 6-digit code sa email mo. Hindi kailangan ng password.', label: 'Email address', ph: 'pangalan@example.com',

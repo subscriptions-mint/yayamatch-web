@@ -8,7 +8,7 @@ import { HouseholdAvatar } from '../../components/domain';
 import { helperName } from '../../lib/match';
 import { HELPERS } from '../../data/helpers';
 import { HOUSEHOLDS } from '../../data/households';
-import { enterSide, verifyPhone, chooseSide, sendSignInCode, verifySignInCode, signInSample, signInWith, logout, settle } from '../../lib/actions';
+import { enterSide, verifyPhone, chooseSide, sendSignInCode, verifySignInCode, signInSample, signInTestAccount, signInWith, logout, settle } from '../../lib/actions';
 import { DEMO_OTP } from '../../data/constants';
 import { LIVE, SEEDS_ON } from '../../lib/config';
 import type { Side } from '../../lib/types';
@@ -322,7 +322,31 @@ function SampleAccounts() {
           {busy === a.email ? <span className="spinner" /> : <Tag tone="muted">{t('live.samples.tag')}</Tag>}
         </button>
       ))}
+      <TestAccountSignIn disabled={!!busy} />
     </section>
+  );
+}
+
+/** Staging only: sign in to a personal test account with a password (no reset, unlike the shared samples). */
+function TestAccountSignIn({ disabled }: { disabled: boolean }) {
+  const t = useT();
+  const [open, setOpen] = useState(false);
+  const [email, setEmail] = useState('');
+  const [pw, setPw] = useState('');
+  const [busy, setBusy] = useState(false);
+  const go = () => {
+    if (!email.trim() || !pw) return;
+    setBusy(true);
+    void signInTestAccount(email, pw).then(ok => { if (!ok) setBusy(false); });
+  };
+  if (!open) return <button type="button" className="textlink mt-12" onClick={() => setOpen(true)} data-testid="test-account-open">{t('live.samples.testOpen')}</button>;
+  return (
+    <div className="stack gap-12 mt-12" data-testid="test-account">
+      <b className="samples__title">{t('live.samples.testTitle')}</b>
+      <Field label={t('live.email.label')} value={email} type="email" inputMode="email" icon="mail" testId="test-email" onChange={v => setEmail(v.slice(0, 120))} onEnter={go} />
+      <Field label={t('live.samples.testPassword')} value={pw} type="password" icon="lock" testId="test-password" onChange={v => setPw(v.slice(0, 128))} onEnter={go} />
+      <Button onClick={go} disabled={disabled || busy || !email.trim() || !pw} testId="test-signin">{busy ? t('live.signin.working') : t('live.samples.testGo')}</Button>
+    </div>
   );
 }
 

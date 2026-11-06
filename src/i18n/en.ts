@@ -376,6 +376,7 @@ export const en = {
       title: 'Try a sample account', staging: 'Staging only', tag: 'Sample account',
       body: 'For testers. Everyone shares these two accounts, and each one starts clean every time you sign in. They only meet sample profiles.',
       yaya: 'Kristine', yayaSub: 'Yaya · Quezon City · opens in Tagalog', family: 'Santos Family', familySub: 'Family · Makati · opens in English',
+      testOpen: 'Have a test account? Sign in with a password', testTitle: 'Test account', testPassword: 'Password', testGo: 'Sign in',
     },
     email: {
       title: 'Sign in with email', body: 'We will email you a 6-digit code. No password needed.', label: 'Email address', ph: 'name@example.com',
