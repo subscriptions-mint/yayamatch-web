@@ -60,6 +60,7 @@ export const verifySignInCode = live.verifyCode;
 export const signInSample = live.signInSample;
 export const signInTestAccount = live.signInTestAccount;
 export const signInWith = live.oauth;
+export const socialProviders = live.socialProviders;
 export const chooseSide = live.chooseSide;
 
 // ---------- auth (demo) ----------

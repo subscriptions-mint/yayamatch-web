@@ -8,7 +8,7 @@ import { HouseholdAvatar } from '../../components/domain';
 import { helperName } from '../../lib/match';
 import { HELPERS } from '../../data/helpers';
 import { HOUSEHOLDS } from '../../data/households';
-import { enterSide, verifyPhone, chooseSide, sendSignInCode, verifySignInCode, signInSample, signInTestAccount, signInWith, logout, settle } from '../../lib/actions';
+import { enterSide, verifyPhone, chooseSide, sendSignInCode, verifySignInCode, signInSample, signInTestAccount, signInWith, socialProviders, logout, settle } from '../../lib/actions';
 import { DEMO_OTP } from '../../data/constants';
 import { LIVE, SEEDS_ON } from '../../lib/config';
 import type { Side } from '../../lib/types';
@@ -352,11 +352,20 @@ function TestAccountSignIn({ disabled }: { disabled: boolean }) {
 
 function SignInOptions() {
   const t = useT();
+  // Facebook and Google show only once they are switched on in Supabase (no redeploy needed then).
+  // undefined = still checking (hidden); null = couldn't check (shown; the click checks again).
+  const [on, setOn] = useState<Record<string, boolean> | null | undefined>(undefined);
+  useEffect(() => {
+    let alive = true;
+    void socialProviders().then(p => { if (alive) setOn(p); });
+    return () => { alive = false; };
+  }, []);
+  const show = (p: 'google' | 'facebook') => on === null || on?.[p] === true;
   return (
     <div className="signin" id="signin" data-testid="signin">
       <div className="signin__title">{t('live.signin.title')}</div>
-      <button type="button" className="sbtn sbtn--fb" onClick={() => signInWith('facebook')} data-testid="signin-facebook"><FbMark />{t('live.signin.facebook')}</button>
-      <button type="button" className="sbtn sbtn--google" onClick={() => signInWith('google')} data-testid="signin-google"><GoogleMark />{t('live.signin.google')}</button>
+      {show('facebook') && <button type="button" className="sbtn sbtn--fb" onClick={() => void signInWith('facebook')} data-testid="signin-facebook"><FbMark />{t('live.signin.facebook')}</button>}
+      {show('google') && <button type="button" className="sbtn sbtn--google" onClick={() => void signInWith('google')} data-testid="signin-google"><GoogleMark />{t('live.signin.google')}</button>}
       <button type="button" className="sbtn sbtn--email" onClick={() => nav('auth-email')} data-testid="signin-email"><Icon name="mail" size={20} />{t('live.signin.email')}</button>
       <p className="signin__fine">{t('live.signin.fine')}</p>
       {SEEDS_ON && <SampleAccounts />}

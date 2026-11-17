@@ -145,6 +145,10 @@ export const auth = {
     setSession(s);
     return s;
   },
+  /** Public auth settings: which sign-in providers are switched on in the Supabase dashboard. */
+  settings(): Promise<{ external?: Record<string, boolean> }> {
+    return raw<{ external?: Record<string, boolean> }>('/auth/v1/settings', { method: 'GET' }, false);
+  },
   oauthUrl(provider: 'google' | 'facebook'): string {
     return `${base()}/auth/v1/authorize?provider=${provider}&redirect_to=${encodeURIComponent(appUrl())}`;
   },

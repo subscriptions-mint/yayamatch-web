@@ -53,7 +53,21 @@ export async function signInTestAccount(email: string, password: string): Promis
   return true;
 }
 
-export function oauth(provider: 'google' | 'facebook') {
+let providersP: Promise<Record<string, boolean> | null> | null = null;
+/** Which social sign-ins are switched on in Supabase (null if that can't be checked right now). */
+export function socialProviders(fresh = false): Promise<Record<string, boolean> | null> {
+  if (!providersP || fresh) {
+    providersP = auth.settings()
+      .then(s => s?.external ?? null)
+      .catch(() => { providersP = null; return null; });
+  }
+  return providersP;
+}
+
+/** Supabase answers a switched-off provider with a bare JSON error page, so check before leaving the app. */
+export async function oauth(provider: 'google' | 'facebook') {
+  const on = await socialProviders(true); // fresh: the setting may have changed since the page loaded
+  if (on && on[provider] !== true) { toast(tr('live.err.providerOff'), { ms: 6000 }); return; }
   location.assign(auth.oauthUrl(provider));
 }
 

@@ -19,7 +19,7 @@ export function createMock({ helpers, households, seedPassword, appUrl }) {
   const storage = new Map(); // bucket/path -> { body, type }
   const mail = {}; // email -> last code
   const calls = []; // rpc and function names, in order
-  const flags = { diditLive: false, paymongoLive: false, has0003: true };
+  const flags = { diditLive: false, paymongoLive: false, has0003: true, providers: { google: true, facebook: false } };
   let clock = Date.now() - 3600_000;
   const tick = () => new Date((clock += 1000)).toISOString();
 
@@ -390,16 +390,16 @@ export function createMock({ helpers, households, seedPassword, appUrl }) {
       return ok({ id: me, email: prof(me)?.email });
     }
     if (p === '/auth/v1/logout') { tokens.delete(auth); return { status: 204, body: null }; }
+    if (p === '/auth/v1/settings' && method === 'GET') {
+      return ok({ external: { email: true, phone: false, apple: false, ...flags.providers }, disable_signup: false });
+    }
     if (p === '/auth/v1/authorize') {
       const provider = url.searchParams.get('provider');
       const back = url.searchParams.get('redirect_to') ?? appUrl;
-      let to;
-      if (provider === 'google') {
-        const s = issue(userFor('oauth.google@example.com').id);
-        to = `${back}#access_token=${s.access_token}&refresh_token=${s.refresh_token}&expires_in=3600&token_type=bearer&type=signup`;
-      } else {
-        to = withParams(back, { error: 'validation_failed', error_description: 'Unsupported provider: provider is not enabled' });
-      }
+      // Like real Supabase: a switched-off provider gets a bare JSON error, not a redirect back.
+      if (!flags.providers[provider]) return { status: 400, body: { code: 400, error_code: 'validation_failed', msg: 'Unsupported provider: provider is not enabled' } };
+      const s = issue(userFor(`oauth.${provider}@example.com`).id);
+      const to = `${back}#access_token=${s.access_token}&refresh_token=${s.refresh_token}&expires_in=3600&token_type=bearer&type=signup`;
       return { status: 200, html: `<!doctype html><script>location.replace(${JSON.stringify(to)})</script>` };
     }
 

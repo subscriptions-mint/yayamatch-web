@@ -144,7 +144,8 @@ const localState = () => page.evaluate(() => JSON.parse(localStorage.getItem('ya
 // ================= signed out =================
 await page.goto(APP);
 await visible('signin');
-check(await tid('signin-facebook').isVisible() && await tid('signin-google').isVisible() && await tid('signin-email').isVisible(), 'Facebook, Google and email sign-in');
+check(await until(async () => await tid('signin-google').isVisible()) && await tid('signin-email').isVisible(), 'Google and email sign-in');
+check(!(await page.locator('[data-testid=signin-facebook]').count()), 'Facebook hidden while it is switched off in Supabase');
 check(await tid('samples').isVisible(), 'staging: sample accounts listed');
 check(await has('Sample account'), 'sample accounts are marked');
 check(!(await page.locator('[data-testid=path-family]').count()), 'no side choice before sign-in');
@@ -152,10 +153,29 @@ check(!(await has('Mobile number')) && !(await has('Use demo code')), 'no phone 
 check(!(await has('Working demo')), 'no demo badge in live mode');
 await shot('welcome');
 
-// provider turned off -> ?error= -> friendly toast, clean URL
-await tid('signin-facebook').click();
-check(await until(() => has('not turned on yet')), 'provider off: friendly toast');
+// a sign-in error coming back from Supabase (?error=) -> friendly toast, clean URL
+await page.goto(APP + '?error=validation_failed&error_description=Unsupported+provider%3A+provider+is+not+enabled');
+check(await until(() => has('not turned on yet')), 'provider error on return: friendly toast');
 check(!page.url().includes('error='), 'error query removed from the URL');
+await visible('signin');
+
+// switched on in Supabase -> the button appears with no redeploy, and works
+mock.flags.providers.facebook = true;
+await page.goto(APP); await page.reload();
+check(await until(async () => await tid('signin-facebook').isVisible()), 'Facebook appears once switched on');
+await tid('signin-facebook').click();
+check(await visible('side-picker'), 'Facebook sign-in returns signed in');
+check(await has('oauth.facebook@example.com'), 'signed in as the Facebook email');
+await tid('signout').click();
+await visible('signin');
+
+// switched off again while the page is open -> the click is refused with a toast, never the JSON error page
+mock.flags.providers.facebook = false;
+await tid('signin-facebook').click();
+check(await until(() => has('not turned on yet')), 'stale button: friendly toast instead of leaving the app');
+check(!page.url().includes('supabase.co'), 'stayed in the app');
+await page.goto(APP); await page.reload();
+check(!(await page.locator('[data-testid=signin-facebook]').count()), 'Facebook hidden again after reload');
 
 // Google: returns with #access_token
 await tid('signin-google').click();
