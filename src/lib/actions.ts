@@ -61,6 +61,7 @@ export const signInSample = live.signInSample;
 export const signInTestAccount = live.signInTestAccount;
 export const signInWith = live.oauth;
 export const socialProviders = live.socialProviders;
+export const signInWithGoogle = live.signInWithGoogle;
 export const chooseSide = live.chooseSide;
 
 // ---------- auth (demo) ----------

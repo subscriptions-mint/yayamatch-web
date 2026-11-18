@@ -3,7 +3,8 @@
 //   node scripts/build.mjs --single  -> dist-single/index.html (images inlined, one file)
 //   node scripts/build.mjs --watch   -> rebuild dist/ on change
 //   node scripts/build.mjs --live    -> dist-live/: the app on Supabase. Reads from the environment:
-//        YM_SUPABASE_URL, YM_SUPABASE_KEY (default: live.config.json), YM_SEED_PASSWORD, YM_APP_URL (optional)
+//        YM_SUPABASE_URL, YM_SUPABASE_KEY (default: live.config.json), YM_SEED_PASSWORD, YM_APP_URL (optional),
+//        YM_GOOGLE_CLIENT_ID (optional, public; default: live.config.json googleClientId)
 //   --out <dir> writes somewhere else (the live e2e test uses this).
 import { build, context } from 'esbuild';
 import { readFileSync, writeFileSync, mkdirSync, readdirSync, copyFileSync, rmSync, existsSync } from 'node:fs';
@@ -33,6 +34,15 @@ if (live) {
   const cfg = { supabaseUrl: url, supabaseKey: key, mode: 'live' };
   if (env.YM_SEED_PASSWORD) cfg.seedPassword = env.YM_SEED_PASSWORD;
   if (env.YM_APP_URL) cfg.appUrl = env.YM_APP_URL.trim();
+  // Google's OAuth Client ID is public by design (it is visible in every sign-in request). Never put the Client Secret here.
+  const gid = (env.YM_GOOGLE_CLIENT_ID || defaults.googleClientId || '').trim();
+  if (gid) {
+    if (!/^[\w-]+\.apps\.googleusercontent\.com$/.test(gid)) {
+      console.error('YM_GOOGLE_CLIENT_ID should look like 1234-abc.apps.googleusercontent.com (the Client ID, not the secret).');
+      process.exit(1);
+    }
+    cfg.googleClientId = gid;
+  }
   configJs = `window.__YM_CONFIG__=${JSON.stringify(cfg).replace(/</g, '\\u003c')};`;
 }
 

@@ -3,7 +3,7 @@
 // a light version of the RLS rules in 0001/0002), the RPCs (0001 + 0002, plus the two proposed in 0003),
 // the edge functions (test mode, plus switchable "live" Didit / PayMongo returns) and Storage.
 // Realtime is not mocked on purpose: the app must keep working on polling alone.
-import { randomUUID, randomInt } from 'node:crypto';
+import { randomUUID, randomInt, createHash } from 'node:crypto';
 
 const ID_TYPE = { license: 'drivers' };
 const ARR = a => (a === 'livein' ? 'live-in' : 'live-out');
@@ -19,7 +19,7 @@ export function createMock({ helpers, households, seedPassword, appUrl }) {
   const storage = new Map(); // bucket/path -> { body, type }
   const mail = {}; // email -> last code
   const calls = []; // rpc and function names, in order
-  const flags = { diditLive: false, paymongoLive: false, has0003: true, providers: { google: true, facebook: false } };
+  const flags = { diditLive: false, paymongoLive: false, has0003: true, providers: { google: true, facebook: false }, googleClientId: 'test-client.apps.googleusercontent.com' };
   let clock = Date.now() - 3600_000;
   const tick = () => new Date((clock += 1000)).toISOString();
 
@@ -382,6 +382,19 @@ export function createMock({ helpers, households, seedPassword, appUrl }) {
         const u = users.get(String(body.email).toLowerCase());
         if (!u || !u.password || u.password !== body.password) return { status: 400, body: { error: 'invalid_grant', error_description: 'Invalid login credentials' } };
         return ok(issue(u.id));
+      }
+      if (grant === 'id_token') {
+        // Like Supabase Auth: the provider must be on, the token's audience must be our Client ID, and the
+        // SHA-256 of the raw nonce we receive must equal the nonce Google put in the token.
+        if (body.provider !== 'google' || !flags.providers.google) return { status: 400, body: { code: 400, error_code: 'validation_failed', msg: 'Provider (issuer "https://accounts.google.com") is not enabled' } };
+        let claims = null;
+        try { claims = JSON.parse(Buffer.from(String(body.id_token).split('.')[1], 'base64url').toString()); } catch { claims = null; }
+        if (!claims || claims.iss !== 'https://accounts.google.com') return { status: 400, body: { code: 400, error_code: 'bad_jwt', msg: 'Bad ID token' } };
+        if (claims.aud !== flags.googleClientId) return { status: 400, body: { code: 400, error_code: 'validation_failed', msg: `Unacceptable audience in id_token: [${claims.aud}]` } };
+        const hashed = body.nonce ? createHash('sha256').update(String(body.nonce)).digest('hex') : null;
+        if (!hashed || hashed !== claims.nonce) return { status: 400, body: { code: 400, error_code: 'validation_failed', msg: 'Nonces mismatch' } };
+        calls.push('auth:id_token');
+        return ok(issue(userFor(String(claims.email).toLowerCase()).id));
       }
       if (grant === 'refresh_token') { const uid = tokens.get(body.refresh_token); if (!uid) return { status: 400, body: { error: 'invalid_grant' } }; return ok(issue(uid)); }
     }

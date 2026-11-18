@@ -8,7 +8,8 @@ import { HouseholdAvatar } from '../../components/domain';
 import { helperName } from '../../lib/match';
 import { HELPERS } from '../../data/helpers';
 import { HOUSEHOLDS } from '../../data/households';
-import { enterSide, verifyPhone, chooseSide, sendSignInCode, verifySignInCode, signInSample, signInTestAccount, signInWith, socialProviders, logout, settle } from '../../lib/actions';
+import { enterSide, verifyPhone, chooseSide, sendSignInCode, verifySignInCode, signInSample, signInTestAccount, signInWith, socialProviders, signInWithGoogle, logout, settle } from '../../lib/actions';
+import { googleClientId, loadGis, renderGoogleButton } from '../../lib/live/google';
 import { DEMO_OTP } from '../../data/constants';
 import { LIVE, SEEDS_ON } from '../../lib/config';
 import type { Side } from '../../lib/types';
@@ -350,6 +351,49 @@ function TestAccountSignIn({ disabled }: { disabled: boolean }) {
   );
 }
 
+/**
+ * Google's official "Sign in with Google" button (Google Identity Services). If Google's script can't load
+ * (blocked, offline), it falls back to the redirect button, which goes through Supabase's Google page instead.
+ */
+function GoogleSignIn() {
+  const t = useT();
+  const lang = useStore(s => s.lang);
+  const box = useRef<HTMLDivElement>(null);
+  const [mode, setMode] = useState<'loading' | 'gis' | 'fallback'>('loading');
+  const [busy, setBusy] = useState(false);
+  const [round, setRound] = useState(0); // a new round draws the button again with a fresh nonce
+  useEffect(() => {
+    let alive = true;
+    void (async () => {
+      const loaded = await loadGis(lang);
+      const el = box.current;
+      if (!alive) return;
+      if (!loaded || !el) { setMode('fallback'); return; }
+      const shown = await renderGoogleButton(el, {
+        lang,
+        width: el.clientWidth || 320,
+        onCredential: (idToken, rawNonce) => {
+          setBusy(true);
+          void signInWithGoogle(idToken, rawNonce).then(ok => {
+            if (ok || !alive) return;
+            setBusy(false);
+            setRound(r => r + 1);
+          });
+        },
+      });
+      if (alive) setMode(shown ? 'gis' : 'fallback');
+    })();
+    return () => { alive = false; };
+  }, [lang, round]);
+  return (
+    <div className="gsi" data-testid="signin-google-wrap" data-mode={mode}>
+      {mode === 'fallback' && <button type="button" className="sbtn sbtn--google" onClick={() => void signInWith('google')} data-testid="signin-google"><GoogleMark />{t('live.signin.google')}</button>}
+      <div ref={box} className="gsi__btn" data-testid="signin-google-gis" aria-busy={busy} hidden={mode === 'fallback'} />
+      {busy && <p className="signin__fine" role="status" data-testid="signin-google-busy">{t('live.signin.working')}</p>}
+    </div>
+  );
+}
+
 function SignInOptions() {
   const t = useT();
   // Facebook and Google show only once they are switched on in Supabase (no redeploy needed then).
@@ -365,7 +409,9 @@ function SignInOptions() {
     <div className="signin" id="signin" data-testid="signin">
       <div className="signin__title">{t('live.signin.title')}</div>
       {show('facebook') && <button type="button" className="sbtn sbtn--fb" onClick={() => void signInWith('facebook')} data-testid="signin-facebook"><FbMark />{t('live.signin.facebook')}</button>}
-      {show('google') && <button type="button" className="sbtn sbtn--google" onClick={() => void signInWith('google')} data-testid="signin-google"><GoogleMark />{t('live.signin.google')}</button>}
+      {show('google') && (googleClientId()
+        ? <GoogleSignIn />
+        : <button type="button" className="sbtn sbtn--google" onClick={() => void signInWith('google')} data-testid="signin-google"><GoogleMark />{t('live.signin.google')}</button>)}
       <button type="button" className="sbtn sbtn--email" onClick={() => nav('auth-email')} data-testid="signin-email"><Icon name="mail" size={20} />{t('live.signin.email')}</button>
       <p className="signin__fine">{t('live.signin.fine')}</p>
       {SEEDS_ON && <SampleAccounts />}

@@ -149,6 +149,14 @@ export const auth = {
   settings(): Promise<{ external?: Record<string, boolean> }> {
     return raw<{ external?: Record<string, boolean> }>('/auth/v1/settings', { method: 'GET' }, false);
   },
+  /** "Sign in with Google": Supabase verifies Google's ID token (signature, issuer, audience, expiry, nonce) and returns a session. */
+  async signInWithIdToken(provider: 'google', idToken: string, nonce: string): Promise<Session> {
+    const r = await raw<{ access_token: string; refresh_token: string; expires_in: number; user: AuthUser }>(
+      '/auth/v1/token?grant_type=id_token', { method: 'POST', body: JSON.stringify({ provider, id_token: idToken, nonce }) }, false);
+    const s = sessionFrom(r);
+    setSession(s);
+    return s;
+  },
   oauthUrl(provider: 'google' | 'facebook'): string {
     return `${base()}/auth/v1/authorize?provider=${provider}&redirect_to=${encodeURIComponent(appUrl())}`;
   },

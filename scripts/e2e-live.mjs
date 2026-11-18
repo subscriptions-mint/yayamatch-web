@@ -31,7 +31,7 @@ const SEED_PW = 'sample-pass-123';
 const out = join(root, '.live-test');
 
 execFileSync(process.execPath, [join(root, 'scripts/build.mjs'), '--live', '--out', out], {
-  env: { ...process.env, YM_SUPABASE_URL: SUPA, YM_SUPABASE_KEY: 'sb_publishable_test_key', YM_SEED_PASSWORD: SEED_PW, YM_APP_URL: APP },
+  env: { ...process.env, YM_SUPABASE_URL: SUPA, YM_SUPABASE_KEY: 'sb_publishable_test_key', YM_SEED_PASSWORD: SEED_PW, YM_APP_URL: APP, YM_GOOGLE_CLIENT_ID: 'test-client.apps.googleusercontent.com' },
   stdio: ['ignore', 'ignore', 'inherit'],
 });
 
@@ -58,6 +58,29 @@ const CORS = {
   'access-control-allow-methods': 'GET, POST, PATCH, DELETE, OPTIONS',
 };
 
+// A stand-in for Google Identity Services: initialize() keeps the config, renderButton() draws a button that,
+// when clicked, hands back an unsigned "ID token" carrying our Client ID and the hashed nonce, as Google would.
+const gis = { blocked: false, loads: 0 };
+const GIS_FAKE = `(function () {
+  var cfg = null;
+  var b64 = function (o) { return btoa(JSON.stringify(o)).replace(/=+$/, '').replace(/\\+/g, '-').replace(/\\//g, '_'); };
+  window.google = { accounts: { id: {
+    initialize: function (c) { cfg = c; window.__gisInits = (window.__gisInits || 0) + 1; window.__gisCfg = { client_id: c.client_id, nonce: c.nonce, ux_mode: c.ux_mode, auto_select: c.auto_select }; },
+    renderButton: function (el, o) {
+      el.innerHTML = '';
+      var btn = document.createElement('button');
+      btn.type = 'button'; btn.setAttribute('data-testid', 'gis-button'); btn.textContent = 'Continue with Google';
+      btn.onclick = function () {
+        var claims = { iss: 'https://accounts.google.com', aud: cfg.client_id, sub: 'g-123', email: 'gis.user@example.com', email_verified: true, nonce: cfg.nonce, exp: Math.floor(Date.now() / 1000) + 600 };
+        cfg.callback({ credential: b64({ alg: 'RS256', typ: 'JWT' }) + '.' + b64(claims) + '.sig', select_by: 'btn' });
+      };
+      el.appendChild(btn); window.__gisButton = o;
+    },
+    disableAutoSelect: function () { window.__gisSignedOut = (window.__gisSignedOut || 0) + 1; },
+    cancel: function () {}
+  } } };
+})();`;
+
 const browser = await chromium.launch();
 const context = await browser.newContext({ viewport: { width, height }, deviceScaleFactor: 1 });
 await context.routeWebSocket(/\/realtime\//, ws => { ws.close(); }); // realtime is absent: polling must carry chat
@@ -79,6 +102,11 @@ await context.route('**/*', async route => {
     if (r.html) return route.fulfill({ status: 200, headers: { 'content-type': 'text/html' }, body: r.html });
     if (r.raw) return route.fulfill({ status: r.status, headers: { ...CORS, 'content-type': r.type ?? 'application/octet-stream' }, body: r.raw });
     return route.fulfill({ status: r.status, headers: { ...CORS, 'content-type': 'application/json' }, body: r.body == null ? '' : JSON.stringify(r.body) });
+  }
+  if (url.startsWith('https://accounts.google.com/gsi/client')) {
+    if (gis.blocked) return route.abort();
+    gis.loads++;
+    return route.fulfill({ status: 200, headers: { 'content-type': 'text/javascript' }, body: GIS_FAKE });
   }
   return route.abort();
 });
@@ -144,7 +172,15 @@ const localState = () => page.evaluate(() => JSON.parse(localStorage.getItem('ya
 // ================= signed out =================
 await page.goto(APP);
 await visible('signin');
-check(await until(async () => await tid('signin-google').isVisible()) && await tid('signin-email').isVisible(), 'Google and email sign-in');
+check(await until(async () => await tid('gis-button').isVisible()) && await tid('signin-email').isVisible(), "Google's own button and email sign-in");
+check(!(await page.locator('[data-testid=signin-google]').count()), 'no redirect button while Google\'s button works');
+{
+  const c = await page.evaluate(() => ({ cfg: window.__gisCfg, btn: window.__gisButton }));
+  check(c.cfg?.client_id === 'test-client.apps.googleusercontent.com', 'GIS gets the configured Client ID');
+  check(/^[0-9a-f]{64}$/.test(c.cfg?.nonce ?? ''), 'GIS gets a SHA-256 (hex) nonce');
+  check(c.cfg?.ux_mode === 'popup' && c.cfg?.auto_select === false, 'popup mode, no automatic sign-in');
+  check(c.btn?.text === 'continue_with' && c.btn?.locale === 'en', 'official button: "Continue with Google", in the app language');
+}
 check(!(await page.locator('[data-testid=signin-facebook]').count()), 'Facebook hidden while it is switched off in Supabase');
 check(await tid('samples').isVisible(), 'staging: sample accounts listed');
 check(await has('Sample account'), 'sample accounts are marked');
@@ -177,14 +213,51 @@ check(!page.url().includes('supabase.co'), 'stayed in the app');
 await page.goto(APP); await page.reload();
 check(!(await page.locator('[data-testid=signin-facebook]').count()), 'Facebook hidden again after reload');
 
-// Google: returns with #access_token
-await tid('signin-google').click();
-check(await visible('side-picker'), 'OAuth return signs in, then asks for a side');
-check(!page.url().includes('access_token'), 'token hash removed from the URL');
-check(await has('oauth.google@example.com'), 'signed in as the OAuth email');
+// Google (GIS): Supabase rejects the token's audience (Client ID mismatch) -> friendly message, fresh button
+mock.flags.googleClientId = 'someone-else.apps.googleusercontent.com';
+{
+  const firstNonce = await page.evaluate(() => window.__gisCfg.nonce);
+  await tid('gis-button').click();
+  check(await until(() => has('not set up correctly')), 'wrong Client ID: friendly message');
+  check(await until(async () => (await page.evaluate(() => window.__gisCfg.nonce)) !== firstNonce), 'button set up again with a new nonce');
+  check(await tid('signin').isVisible(), 'still on sign-in after a failed Google attempt');
+}
+mock.flags.googleClientId = 'test-client.apps.googleusercontent.com';
+
+// Google (GIS): token + raw nonce -> Supabase session, then the side picker
+mock.calls.length = 0;
+await tid('gis-button').click();
+check(await visible('side-picker'), 'Google sign-in signs in, then asks for a side');
+check(mock.calls.includes('auth:id_token'), 'ID token exchanged with Supabase (nonce checked)');
+check(await has('gis.user@example.com'), 'signed in as the Google email');
+check(!page.url().includes('supabase.co'), 'never left the app');
 await shot('side-picker');
 await tid('signout').click();
 check(await visible('signin'), 'sign out from the side picker');
+check((await page.evaluate(() => window.__gisSignedOut ?? 0)) >= 1, 'sign-out tells GIS not to sign back in automatically');
+
+// Google's script blocked (ad blocker, offline) -> redirect button through Supabase's Google page still works
+gis.blocked = true;
+await page.goto(APP); await page.reload();
+check(await until(async () => await tid('signin-google').isVisible(), 12000), 'fallback redirect button when Google\'s script is blocked');
+await tid('signin-google').click();
+check(await visible('side-picker'), 'redirect fallback signs in, then asks for a side');
+check(!page.url().includes('access_token'), 'token hash removed from the URL');
+check(await has('oauth.google@example.com'), 'signed in as the OAuth email');
+await tid('signout').click();
+check(await visible('signin'), 'sign out after the redirect fallback');
+gis.blocked = false;
+await page.goto(APP); await page.reload();
+check(await until(async () => await tid('gis-button').isVisible()), "Google's button is back once the script loads");
+
+// Google switched off in Supabase -> no Google button at all
+mock.flags.providers.google = false;
+await page.goto(APP); await page.reload();
+await until(async () => await tid('signin-email').isVisible());
+check(!(await page.locator('[data-testid=signin-google-wrap], [data-testid=signin-google]').count()), 'no Google button while it is off in Supabase');
+mock.flags.providers.google = true;
+await page.goto(APP); await page.reload();
+await until(async () => await tid('gis-button').isVisible());
 
 // ================= sample sign-in (Santos) =================
 mock.calls.length = 0;

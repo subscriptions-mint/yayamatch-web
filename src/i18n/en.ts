@@ -389,6 +389,7 @@ export const en = {
     err: {
       network: 'No connection. Check your internet and try again.', tooMany: 'Too many tries. Wait a minute, then try again.', generic: 'Something went wrong. Please try again.',
       providerOff: 'That sign-in option is not turned on yet. Use email instead.', linkExpired: 'That sign-in link has expired. Ask for a new code.',
+      googleSetup: 'Google sign-in is not set up correctly yet. Use email instead.', googleRetry: 'Google sign-in did not finish. Please try again.',
       signin: 'Sign-in did not work. Please try again.', sample: 'The sample account could not sign in.', photo: 'The photo did not upload. Please try again.',
     },
     loading: 'Loading…', payCancelled: 'Payment cancelled. You were not charged.', testPay: 'Test mode: no money moves.',

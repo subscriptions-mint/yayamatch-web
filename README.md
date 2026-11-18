@@ -163,6 +163,7 @@ The live build runs the same screens on the Supabase project in `backend-spec.md
 | `YM_SUPABASE_KEY` | yes | `supabaseKey` | The publishable key (or the legacy anon key). Never the service-role key |
 | `YM_SEED_PASSWORD` | staging only | `seedPassword` | Shows "Try a sample account" on Welcome (Kristine and the Santos family). Leave it out of production builds |
 | `YM_APP_URL` | recommended | `appUrl` | The site's own URL, e.g. `https://yayamatch.vercel.app/`. Used as the return address for Google/Facebook sign-in, the email link, Didit and PayMongo. Defaults to the page's own address |
+| `YM_GOOGLE_CLIENT_ID` | for Google's button | `googleClientId` | The Google OAuth **Client ID** (`…apps.googleusercontent.com`). Public by design; can also go in `live.config.json` as `googleClientId`. Never the Client Secret (that goes only into Supabase). Without it, Google sign-in uses the redirect button |
 
 ```bash
 YM_SUPABASE_URL=https://qvczthltbdefwefpsncd.supabase.co \
@@ -181,7 +182,9 @@ node scripts/build.mjs --live
 
 ### Sign-in
 
-- Welcome shows **Continue with Facebook**, **Continue with Google** and **Use email instead**. There is no phone or SMS sign-in in live mode.
+- Welcome shows **Continue with Facebook**, **Continue with Google** and **Use email instead**. There is no phone or SMS sign-in in live mode. Facebook and Google show only once that provider is on in Supabase (read from the public `/auth/v1/settings`), so switching one on needs no redeploy.
+- **Google** (`src/lib/live/google.ts`): with `YM_GOOGLE_CLIENT_ID` set, the screen shows Google's official button from Google Identity Services (`accounts.google.com/gsi/client`, popup mode, FedCM-ready, no automatic sign-in). Each attempt gets a fresh nonce: its SHA-256 goes to Google, the raw value to Supabase. Google's ID token goes to `POST /auth/v1/token?grant_type=id_token`, where Supabase Auth verifies the signature, issuer, audience (our Client ID), expiry and nonce, then creates or signs in the user. If Google's script is blocked, the redirect button (`/auth/v1/authorize?provider=google`) takes over. Sign-out calls `google.accounts.id.disableAutoSelect()`. Errors map to plain messages: provider off, wrong Client ID ("not set up correctly"), nonce/expired ("did not finish, try again"), no connection, too many tries.
+- **Facebook** uses the redirect flow through Supabase (`/auth/v1/authorize?provider=facebook`).
 - Email: `POST /auth/v1/otp` sends a 6-digit code; the code screen reuses the demo's code boxes, with a resend timer. Until the email template is changed, the email holds a link instead: opening it on the same device signs in too.
 - After the first sign-in the person picks a side once (the path cards), then onboards. The card is saved at the end of onboarding, then `rpc/finish_onboarding`. Later edits save themselves.
 - Staging: with `YM_SEED_PASSWORD` set, "Try a sample account" signs in as `kristine.seed@example.com` or `santos.seed@example.com` and calls `rpc/reset_my_demo` first, so each tester starts clean.
@@ -191,7 +194,10 @@ node scripts/build.mjs --live
 1. **Migrations:** apply `0001_core.sql`, `0002_samples.sql`, then review and apply `0003_live_app.sql` (likes count for families without a pass, dated admin ID reviews, matched people keep seeing each other's card after a hire).
 2. **Auth → URL Configuration:** Site URL = the live site. Add it (and any preview URLs) under Redirect URLs.
 3. **Auth → Email templates → Magic Link:** replace the link with the code, e.g. `<p>Your YayaMatch code: <b>{{ .Token }}</b></p>`. Keep the OTP length at 6.
-4. **Auth → Providers:** Google: create an OAuth client in Google Cloud with the redirect URI `https://qvczthltbdefwefpsncd.supabase.co/auth/v1/callback`, then paste the client ID and secret. Facebook: the same with a Meta app (Facebook Login, same redirect URI). Until a provider is on, its button shows "That sign-in option is not turned on yet. Use email instead."
+4. **Auth → Sign In / Providers:**
+   - **Google:** in Google Cloud (Google Auth Platform), set up Branding and Audience (External, In production) and the scopes `openid`, `userinfo.email`, `userinfo.profile`. Create a **Web application** client with **Authorized JavaScript origins** = every origin that shows the sign-in screen (e.g. `https://yayamatch-web-opal.vercel.app`; add `http://localhost:<port>` only while developing) and **Authorized redirect URIs** = `https://qvczthltbdefwefpsncd.supabase.co/auth/v1/callback`. In Supabase, switch Google on and paste the Client ID (under Client IDs) and the Client Secret; leave "Skip nonce check" off. Then set `YM_GOOGLE_CLIENT_ID` in Vercel and redeploy.
+   - **Facebook:** a Meta app with Facebook Login, the same redirect URI; paste the App ID and App Secret into Supabase. The public can only use it once the Meta app is Live (needs a privacy policy URL).
+   - Until a provider is on, its button stays hidden.
 5. **Leave Phone/SMS sign-in off.**
 6. **Admins:** `update public.profiles set role = 'admin' where email = '<you>';` then open `#admin` (also linked from Account / Ako).
 7. **Edge function secrets** (switch each vendor from test mode to live): `APP_URL`; Didit: `DIDIT_API_KEY`, `DIDIT_WORKFLOW_ID`, `DIDIT_WEBHOOK_SECRET` (webhook URL `…/functions/v1/didit-webhook`); PayMongo: `PAYMONGO_SECRET_KEY`, `PAYMONGO_WEBHOOK_SECRET` (webhook URL `…/functions/v1/paymongo-webhook`, event `checkout_session.payment.paid`); biodata reading: `ANTHROPIC_API_KEY`.

@@ -390,6 +390,7 @@ export const tl: Dict = {
     err: {
       network: 'Walang koneksyon. Tingnan ang internet at subukan ulit.', tooMany: 'Masyadong maraming subok. Maghintay ng isang minuto.', generic: 'May mali. Pakisubukan ulit.',
       providerOff: 'Hindi pa naka-on ang paraang ito. Gamitin na lang ang email.', linkExpired: 'Nag-expire na ang link. Humingi ng bagong code.',
+      googleSetup: 'Hindi pa maayos ang pag-sign in gamit ang Google. Gamitin na lang ang email.', googleRetry: 'Hindi natapos ang pag-sign in gamit ang Google. Pakisubukan ulit.',
       signin: 'Hindi gumana ang pag-sign in. Pakisubukan ulit.', sample: 'Hindi maka-sign in ang sample account.', photo: 'Hindi na-upload ang litrato. Pakisubukan ulit.',
     },
     loading: 'Naglo-load…', payCancelled: 'Kinansela ang bayad. Walang nasingil sa’yo.', testPay: 'Test mode: walang perang gagalaw.',

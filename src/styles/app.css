@@ -428,6 +428,11 @@ h1, h2, h3 { text-wrap: balance; }
 .sbtn--fb { background: #1877F2; border-color: #1877F2; color: #fff; }
 .sbtn--fb:active, .sbtn--google:active, .sbtn--email:active { transform: scale(.98); }
 .sbtn--email { background: var(--cream); border-color: transparent; color: var(--coral-deep); }
+/* Google's own button lives in an iframe Google draws; we only give it room and centre it. */
+.gsi { width: 100%; display: grid; gap: 6px; }
+.gsi__btn { width: 100%; min-height: 44px; display: flex; justify-content: center; align-items: center; }
+.gsi__btn[aria-busy="true"] { opacity: .55; pointer-events: none; }
+.gsi .signin__fine { margin: 0; text-align: center; }
 .sidepick .path { min-height: 84px; }
 .sidepick .path[disabled] { opacity: .7; }
 .sidepick .spinner { border-color: rgba(255, 255, 255, .35); border-top-color: #fff; }

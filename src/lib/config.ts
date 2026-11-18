@@ -5,6 +5,8 @@ export interface YmConfig {
   mode: 'live';
   seedPassword?: string;
   appUrl?: string;
+  /** Public Google OAuth Client ID for "Sign in with Google" (not a secret). */
+  googleClientId?: string;
 }
 
 declare global { interface Window { __YM_CONFIG__?: YmConfig } }

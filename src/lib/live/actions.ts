@@ -13,6 +13,7 @@ import {
   friendlyError, uidNow, defaultChecklist, refOf, purchasesInto, refreshInbox,
 } from './sync';
 import { BOOT, RETURN_KEY } from './boot';
+import { googleSignedOut } from './google';
 import * as M from './map';
 import { resizeToBlob, toJpegBase64, dataUrlToBlob } from './media';
 
@@ -64,6 +65,25 @@ export function socialProviders(fresh = false): Promise<Record<string, boolean> 
   return providersP;
 }
 
+/** "Sign in with Google" (GIS button): exchange Google's ID token for a Supabase session. */
+export async function signInWithGoogle(idToken: string, rawNonce: string): Promise<boolean> {
+  try { await auth.signInWithIdToken('google', idToken, rawNonce); } catch (e) { toast(googleError(e), { ms: 6000 }); return false; }
+  await afterSignIn();
+  return true;
+}
+
+function googleError(e: unknown): string {
+  if (e instanceof ApiError) {
+    if (e.status === 0) return tr('live.err.network');
+    if (e.status === 429) return tr('live.err.tooMany');
+    const m = `${e.code ?? ''} ${e.message}`.toLowerCase();
+    if (/not enabled|unsupported provider|not allowed|disabled/.test(m)) return tr('live.err.providerOff');
+    if (/audience|client.?id/.test(m)) return tr('live.err.googleSetup');
+    if (/nonce|expired|invalid|bad.?jwt|signature/.test(m)) return tr('live.err.googleRetry');
+  }
+  return tr('live.err.signin');
+}
+
 /** Supabase answers a switched-off provider with a bare JSON error page, so check before leaving the app. */
 export async function oauth(provider: 'google' | 'facebook') {
   const on = await socialProviders(true); // fresh: the setting may have changed since the page loaded
@@ -72,6 +92,7 @@ export async function oauth(provider: 'google' | 'facebook') {
 }
 
 export async function signOut() {
+  googleSignedOut();
   await signOutLive();
   nav('welcome', undefined, { replace: true });
 }
